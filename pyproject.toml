@@ -1,9 +1,13 @@
 [project]
 name = "srst-clips"
 version = "0.1.0"
-description = "Add your description here"
+description = "poor man's copy-pasting to AI window tool, much vibes, very language learning"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pyqt6>=6.8.1",
 ]
+
+[project.scripts]
+srst-clips = "srst_clips.clipboard_monitor:main"
+srst-clips-activate = "srst_clips.dbus_client:main"
