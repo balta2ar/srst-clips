@@ -1,11 +1,13 @@
 import sys
 import subprocess
 import re
+import os
+import json
 from collections import deque
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QListWidget, QPushButton, QLabel, QListWidgetItem, QSpinBox, QHBoxLayout,
                            QLineEdit)
-from PyQt6.QtCore import QTimer, QObject, pyqtSlot
+from PyQt6.QtCore import QTimer, QObject, pyqtSlot, QSettings, QPoint, QSize, Qt
 from PyQt6.QtGui import QClipboard, QFont, QKeySequence, QShortcut
 from PyQt6.QtDBus import QDBusConnection, QDBusInterface
 
@@ -20,8 +22,10 @@ class ClipboardMonitor(QMainWindow):
         self.target_window_id = None
         self.dbus_service_name = "org.srst.ClipboardMonitor"
         self.dbus_object_path = "/ClipboardMonitor"
+        self.window_config_file = "/tmp/srst_clips_window_config.json"
         
         self.init_ui()
+        self.restore_window_geometry()
         self.setup_clipboard_monitoring()
         self.setup_dbus()
         self.setup_shortcuts()
@@ -51,10 +55,20 @@ class ClipboardMonitor(QMainWindow):
         self.history_list = QListWidget()
         layout.addWidget(self.history_list)
         
+        # Button layout for Find window and Explain
+        button_layout = QHBoxLayout()
+        
         # Window finder button
         self.find_window_btn = QPushButton("Find window")
         self.find_window_btn.clicked.connect(self.find_window)
-        layout.addWidget(self.find_window_btn)
+        button_layout.addWidget(self.find_window_btn)
+        
+        # Explain button
+        self.explain_btn = QPushButton("Explain")
+        self.explain_btn.clicked.connect(self.explain_button_clicked)
+        button_layout.addWidget(self.explain_btn)
+        
+        layout.addLayout(button_layout)
         
         # Status label
         self.status_label = QLabel("No window selected")
@@ -70,6 +84,63 @@ class ClipboardMonitor(QMainWindow):
         
         main_widget.setLayout(layout)
         self.setCentralWidget(main_widget)
+        
+    def restore_window_geometry(self):
+        """Restore window position, size, and target window ID from file"""
+        try:
+            if os.path.exists(self.window_config_file):
+                with open(self.window_config_file, 'r') as f:
+                    config = json.load(f)
+                    
+                    # Restore position
+                    if 'pos_x' in config and 'pos_y' in config:
+                        self.move(config['pos_x'], config['pos_y'])
+                    
+                    # Restore size
+                    if 'width' in config and 'height' in config:
+                        self.resize(config['width'], config['height'])
+                    
+                    # Restore target window ID
+                    if 'target_window_id' in config and config['target_window_id']:
+                        self.target_window_id = config['target_window_id']
+                        self.status_label.setText(f"Selected window: {self.target_window_id}")
+                        
+                print(f"Configuration restored from {self.window_config_file}")
+        except Exception as e:
+            print(f"Error restoring configuration: {e}")
+            
+    def save_window_geometry(self):
+        """Save window position, size, and target window ID to file"""
+        try:
+            config = {
+                'pos_x': self.pos().x(),
+                'pos_y': self.pos().y(),
+                'width': self.width(),
+                'height': self.height(),
+                'target_window_id': self.target_window_id
+            }
+            
+            with open(self.window_config_file, 'w') as f:
+                json.dump(config, f)
+                
+            print(f"Configuration saved to {self.window_config_file}")
+        except Exception as e:
+            print(f"Error saving configuration: {e}")
+            
+    def moveEvent(self, event):
+        """Track window movement"""
+        super().moveEvent(event)
+        self.save_window_geometry()
+        
+    def resizeEvent(self, event):
+        """Track window resizing"""
+        super().resizeEvent(event)
+        self.save_window_geometry()
+        
+    def closeEvent(self, event):
+        """Save window geometry when closing"""
+        self.save_window_geometry()
+        super().closeEvent(event)
         
     def setup_clipboard_monitoring(self):
         self.clipboard.dataChanged.connect(self.on_clipboard_change)
@@ -131,6 +202,8 @@ class ClipboardMonitor(QMainWindow):
                     self.target_window_id = match.group(1)
                     self.status_label.setText(f"Selected window: {self.target_window_id}")
                     print(f"Window ID: {self.target_window_id}")
+                    # Save the updated configuration with the new window ID
+                    self.save_window_geometry()
                 else:
                     self.status_label.setText("Could not find window ID in xwininfo output")
             else:
@@ -190,11 +263,17 @@ class ClipboardMonitor(QMainWindow):
             for match in matches:
                 html_text = html_text.replace(match, f"<b>{match}</b>")
             
-            item.setText(f"{html_text} ({len(matches)})")
+            # Add match count on the left side
+            item.setText(f"({len(matches)}) {html_text}")
         else:
             item.setText(text)
         
         self.history_list.addItem(item)
+    
+    def explain_button_clicked(self):
+        """Handler for the Explain button click event"""
+        result = self.explain()
+        self.status_label.setText(result)
     
     @pyqtSlot()
     def explain(self):
@@ -217,13 +296,14 @@ class ClipboardMonitor(QMainWindow):
         if not self.target_window_id:
             return
             
+        print(f"Sending text: {text}")
         try:
             # Prepare the xdotool command
             cmd = [
                 "xdotool", "windowactivate", self.target_window_id, 
                 "&&", "xdotool", "key", "Escape", 
                 "&&", "xdotool", "key", "g", "i", 
-                "&&", "xdotool", "type", text,
+                "&&", "xdotool", "type", "--delay", "50", text,
                 "&&", "xdotool", "key", "Return"
             ]
             
