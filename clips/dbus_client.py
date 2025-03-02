@@ -59,7 +59,7 @@ def main():
         print(f"Failed to create D-Bus interface: {bus.lastError().message()}")
         return 1
     
-    # Call the explain method
+    time.sleep(1.0)
     print("Calling explain method...")
     reply = interface.call("explain")
     result = reply.arguments()[0] if reply.arguments() else 'No response'

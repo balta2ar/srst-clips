@@ -284,7 +284,7 @@ class ClipboardMonitor(QMainWindow):
             
         for item in reversed(list(self.clipboard_history)):
             matches = self.find_matches(item)
-            if len(matches) > 1:
+            if len(matches) > 0:
                 formatted_text = self.format_text_for_ai(item, matches)
                 self.send_to_ai_window(formatted_text)
                 self.clipboard_history.clear()
