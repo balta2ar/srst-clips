@@ -1,3 +1,7 @@
+[build-system]                                                                                                
+requires = ["setuptools>=61.0.0", "wheel"]                                                                    
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "srst-clips"
 version = "0.1.0"
@@ -9,5 +13,8 @@ dependencies = [
 ]
 
 [project.scripts]
-srst-clips = "srst_clips.clipboard_monitor:main"
-srst-clips-activate = "srst_clips.dbus_client:main"
+srst-clips = "clips.clipboard_monitor:main"
+srst-clips-activate = "clips.dbus_client:main"
+
+[tool.setuptools]
+packages = ["clips"]
