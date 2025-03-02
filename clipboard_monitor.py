@@ -7,7 +7,7 @@ import shlex
 from collections import deque
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QListWidget, QPushButton, QLabel, QListWidgetItem, QSpinBox, QHBoxLayout,
-                           QLineEdit)
+                           QLineEdit, QSizePolicy)
 from PyQt6.QtCore import QTimer, QObject, pyqtSlot, QSettings, QPoint, QSize, Qt
 from PyQt6.QtGui import QClipboard, QFont, QKeySequence, QShortcut
 from PyQt6.QtDBus import QDBusConnection, QDBusInterface
@@ -25,6 +25,10 @@ class ClipboardMonitor(QMainWindow):
         self.dbus_object_path = "/ClipboardMonitor"
         self.window_config_file = "/tmp/srst_clips_window_config.json"
         
+        # Allow the window to be as small as possible
+        self.setMinimumWidth(1)
+        self.setMinimumHeight(1)
+        
         self.init_ui()
         self.restore_window_geometry()
         self.setup_clipboard_monitoring()
@@ -36,42 +40,62 @@ class ClipboardMonitor(QMainWindow):
         
     def init_ui(self):
         self.setWindowTitle("Clipboard Monitor")
-        self.setGeometry(300, 300, 600, 400)
+        self.setGeometry(100, 100, 200, 200)
         
         main_widget = QWidget()
         layout = QVBoxLayout()
         
+        # Set small margins to save space
+        layout.setContentsMargins(1, 1, 1, 1)
+        layout.setSpacing(1)
+        
         size_layout = QHBoxLayout()
-        size_layout.addWidget(QLabel("History size:"))
+        size_layout.setSpacing(1)
+        size_label = QLabel("Size:")
+        size_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        size_layout.addWidget(size_label)
+        
         self.size_spinbox = QSpinBox()
         self.size_spinbox.setRange(1, 50)
         self.size_spinbox.setValue(self.history_size)
         self.size_spinbox.valueChanged.connect(self.update_history_size)
+        self.size_spinbox.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         size_layout.addWidget(self.size_spinbox)
         layout.addLayout(size_layout)
         
         self.history_list = QListWidget()
+        self.history_list.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout.addWidget(self.history_list)
         
         button_layout = QHBoxLayout()
+        button_layout.setSpacing(1)
         
         self.find_window_btn = QPushButton("Find window")
+        self.find_window_btn.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self.find_window_btn.clicked.connect(self.find_window)
         button_layout.addWidget(self.find_window_btn)
         
         self.explain_btn = QPushButton("Explain")
+        self.explain_btn.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self.explain_btn.clicked.connect(self.explain_button_clicked)
         button_layout.addWidget(self.explain_btn)
         
         layout.addLayout(button_layout)
         
         self.status_label = QLabel("No window selected")
+        self.status_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
         
         dbus_layout = QVBoxLayout()
-        dbus_layout.addWidget(QLabel("DBus command (click to select all) or press Win-w:"))
+        dbus_layout.setSpacing(1)
+        dbus_label = QLabel("DBus cmd:")
+        dbus_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        dbus_layout.addWidget(dbus_label)
+        
         self.dbus_command_line = QLineEdit()
         self.dbus_command_line.setReadOnly(True)
+        self.dbus_command_line.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         dbus_layout.addWidget(self.dbus_command_line)
         layout.addLayout(dbus_layout)
         
@@ -300,8 +324,6 @@ class ClipboardMonitor(QMainWindow):
             full_cmd = ' && '.join(cmd_parts)
             subprocess.run(full_cmd, shell=True)
             print(f"Sent text to window {self.target_window_id}")
-            
-            # QTimer.singleShot(500, lambda: self.clipboard.setText(original_clipboard))
             
         except Exception as e:
             print(f"Error sending text: {str(e)}")
