@@ -337,7 +337,7 @@ class ClipboardMonitor(QMainWindow):
                 f"xdotool windowactivate {self.target_window_id}",
                 "xdotool key Escape",
                 "sleep 0.2",
-                "xdotool key g i",
+                "xdotool key g i", # must have Vimium C browser extension installed for this to work
                 "sleep 0.2",
                 "xdotool key ctrl+v",
                 "sleep 0.2",
