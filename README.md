@@ -1,3 +1,7 @@
+## Prerequisites
+
+- Vimium C browser extension (to be able to press "gi" to focus on the input field)
+
 ## Workflow
 
 1. Register a shortcut, e.g. Win-w to call `srst-clips-activate`
