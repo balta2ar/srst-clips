@@ -93,6 +93,11 @@ class ClipboardMonitor(QMainWindow):
         self.explain_btn.clicked.connect(self.explain_button_clicked)
         button_layout.addWidget(self.explain_btn)
 
+        self.reset_btn = QPushButton("Reset")
+        self.reset_btn.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        self.reset_btn.clicked.connect(self.reset_button_clicked)
+        button_layout.addWidget(self.reset_btn)
+
         layout.addLayout(button_layout)
 
         self.status_label = QLabel("No window selected")
@@ -288,6 +293,11 @@ class ClipboardMonitor(QMainWindow):
     def explain_button_clicked(self):
         result = self.explain()
         self.status_label.setText(result)
+
+    def reset_button_clicked(self):
+        self.clipboard_history.clear()
+        self.update_history_display()
+        self.status_label.setText("History cleared")
 
     @pyqtSlot()
     def explain(self):
